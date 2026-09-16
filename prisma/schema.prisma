@@ -1,0 +1,123 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String          @id @default(uuid())
+  username       String          @unique
+  fullName       String
+  avatarUrl      String?
+  createdAt      DateTime        @default(now())
+  memberships    GroupMember[]
+  sessions       StudySession[]
+  messages       Message[]
+  reactions      MessageReaction[]
+  resources      Resource[]
+}
+
+model Community {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  groups      Group[]
+}
+
+model Group {
+  id            String         @id @default(uuid())
+  communityId   String
+  community     Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  createdAt     DateTime       @default(now())
+  members       GroupMember[]
+  sessions      StudySession[]
+  messages      Message[]
+  resources     Resource[]
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  userId    String
+  groupId   String
+  role      String   @default("member") // "admin" | "member"
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model StudySession {
+  id          String    @id @default(uuid())
+  userId      String
+  groupId     String
+  title       String
+  category    String    // e.g., "Practice", "Lecture", "Deep Work"
+  durationSec Int
+  startedAt   DateTime
+  endedAt     DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, endedAt])
+}
+
+model Message {
+  id          String            @id @default(uuid())
+  groupId     String
+  userId      String
+  content     String?           // Text content (supports markdown & URLs)
+  replyToId   String?           // For nested replies
+  isEdited    Boolean           @default(false)
+  isPinned    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replyTo     Message?          @relation("Replies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies     Message[]         @relation("Replies")
+  attachments Attachment[]
+  reactions   MessageReaction[]
+
+  @@index([groupId, createdAt])
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  messageId String
+  fileUrl   String
+  fileType  String   // "image" | "video" | "document"
+  fileName  String
+  fileSize  Int
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String   // Unicode character for the emoji
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+}
+
+model Resource {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  title     String
+  url       String
+  type      String   // "pdf" | "link" | "cheatsheet"
+  tags      String[]
+  createdAt DateTime @default(now())
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
