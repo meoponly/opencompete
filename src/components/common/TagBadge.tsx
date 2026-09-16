@@ -1,8 +1,7 @@
 import React from 'react';
-import { CategoryType } from '../../types';
 
 interface TagBadgeProps {
-  category?: CategoryType | string;
+  category?: string;
   size?: 'sm' | 'md';
   className?: string;
 }

@@ -1,54 +1,40 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStore } from './lib/store';
-import { Sidebar } from './components/layout/Sidebar';
-import { Header } from './components/layout/Header';
-import { DiscussionsTab } from './components/discussions/DiscussionsTab';
-import { LeaderboardTab } from './components/leaderboard/LeaderboardTab';
-import { ResourceVaultTab } from './components/vault/ResourceVaultTab';
-import { FocusTimerModal } from './components/focus/FocusTimerModal';
-import { FocusTimerDock } from './components/focus/FocusTimerDock';
+import { CommunitiesRail } from './components/layout/CommunitiesRail';
+import { ChatListPane } from './components/layout/ChatListPane';
+import { MainChatPane } from './components/layout/MainChatPane';
+import { CreateGroupModal } from './components/chat/CreateGroupModal';
+import { CreateCommunityModal } from './components/chat/CreateCommunityModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { OnboardingModal } from './components/auth/OnboardingModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 
 export const App: React.FC = () => {
-  const { activeTab, setIsTimerModalOpen } = useStore();
-
-  // Global keyboard shortcut to open focus timer (Cmd/Ctrl + K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsTimerModalOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setIsTimerModalOpen]);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isCreateCommunityOpen, setIsCreateCommunityOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen bg-[#09090B] text-[#FAFAFA] overflow-hidden">
-      {/* Level 1 & 2 Sidebar */}
-      <Sidebar />
+    <div className="flex h-screen w-screen bg-[#09090B] text-[#FAFAFA] overflow-hidden select-none font-sans">
+      {/* 1. WhatsApp Communities Leftmost Rail (Top communities + Bottom Settings) */}
+      <CommunitiesRail onOpenCreateCommunity={() => setIsCreateCommunityOpen(true)} />
 
-      {/* Main Workspace Frame */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Header & Tabs */}
-        <Header />
+      {/* 2. Middle Pane: Active Community & Sub-Groups List */}
+      <ChatListPane onOpenCreateGroup={() => setIsCreateGroupOpen(true)} />
 
-        {/* Tab Viewport */}
-        <main className="flex-1 flex min-w-0 overflow-hidden relative">
-          {activeTab === 'discussions' && <DiscussionsTab />}
-          {activeTab === 'leaderboard' && <LeaderboardTab />}
-          {activeTab === 'vault' && <ResourceVaultTab />}
-        </main>
-      </div>
+      {/* 3. Main Pane: Active Conversation & Collapsible Group Info Drawer */}
+      <MainChatPane />
 
-      {/* Floating Focus Timer Engine Modal & Dock */}
-      <FocusTimerModal />
-      <FocusTimerDock />
+      {/* Creation Modals */}
+      <CreateGroupModal
+        isOpen={isCreateGroupOpen}
+        onClose={() => setIsCreateGroupOpen(false)}
+      />
+      <CreateCommunityModal
+        isOpen={isCreateCommunityOpen}
+        onClose={() => setIsCreateCommunityOpen(false)}
+      />
 
-      {/* Real Auth, Onboarding & Settings Modals */}
+      {/* Google Auth, Onboarding & Settings Modals */}
       <AuthModal />
       <OnboardingModal />
       <SettingsModal />

@@ -73,7 +73,6 @@ export async function saveUserProfile(user: User): Promise<void> {
       isOnline: true,
       isStudying: user.isStudying || false,
       currentTask: user.currentTask || '',
-      currentCategory: user.currentCategory || '',
       updatedAt: new Date().toISOString(),
       createdAt: user.createdAt || new Date().toISOString(),
     });

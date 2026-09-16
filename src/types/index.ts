@@ -1,4 +1,4 @@
-export type CategoryType = 'Theory' | 'Practice' | 'Revision' | 'Deep Work' | 'Lecture' | 'Problem Solving';
+export type UserRole = 'owner' | 'community_admin' | 'group_admin' | 'member';
 
 export interface User {
   id: string;
@@ -11,7 +11,6 @@ export interface User {
   isOnline?: boolean;
   isStudying?: boolean;
   currentTask?: string;
-  currentCategory?: CategoryType;
   streakDays: number;
   createdAt: string;
 }
@@ -21,18 +20,25 @@ export interface Community {
   name: string;
   slug: string;
   description: string;
-  iconName: string;
-  bannerColor?: string;
+  avatarUrl?: string;
+  coverUrl?: string;
+  iconName?: string;
+  ownerId: string;
+  adminIds: string[];
   createdAt: string;
-  groupCount?: number;
+  groupsCount?: number;
 }
 
-export interface GroupMember {
-  id: string;
-  userId: string;
-  groupId: string;
-  role: 'admin' | 'moderator' | 'member';
-  user: User;
+export interface GroupPermissions {
+  sendMessages: 'all' | 'admins_only';
+  editGroupInfo: 'all' | 'admins_only';
+  addMembers: 'all' | 'admins_only';
+}
+
+export interface GroupNotificationSettings {
+  muted: boolean;
+  muteUntil?: string; // '8h' | '1w' | 'always' | ISO date
+  customAlertSound?: string;
 }
 
 export interface Group {
@@ -40,20 +46,27 @@ export interface Group {
   communityId: string;
   name: string;
   description: string;
-  iconName?: string;
+  avatarUrl?: string;
+  isAnnouncementGroup?: boolean;
+  ownerId: string;
+  memberIds: string[];
+  adminIds: string[];
+  permissions: GroupPermissions;
+  notificationSettings?: { [userId: string]: GroupNotificationSettings };
   createdAt: string;
-  membersCount: number;
-  activeStudyingCount: number;
+  lastMessage?: Message;
+  unreadCount?: number;
 }
 
 export interface Attachment {
   id: string;
   messageId: string;
   fileUrl: string;
-  fileType: 'image' | 'video' | 'document';
+  fileType: 'image' | 'video' | 'document' | 'audio';
   fileName: string;
   fileSize: number;
   thumbnailUrl?: string;
+  tags?: string[]; // Tagging for documents and media
 }
 
 export interface MessageReaction {
@@ -72,15 +85,6 @@ export interface LinkPreview {
   imageUrl?: string;
 }
 
-export interface StudySessionBroadcast {
-  sessionId: string;
-  durationSec: number;
-  title: string;
-  category: CategoryType;
-  startedAt: string;
-  endedAt: string;
-}
-
 export interface Message {
   id: string;
   groupId: string;
@@ -96,54 +100,16 @@ export interface Message {
   isEdited?: boolean;
   isPinned?: boolean;
   isDeleted?: boolean;
+  deletedBy?: {
+    userId: string;
+    userName: string;
+    role: string;
+  };
   createdAt: string;
   updatedAt?: string;
   attachments?: Attachment[];
   reactions: MessageReaction[];
   linkPreview?: LinkPreview | null;
-  sessionBroadcast?: StudySessionBroadcast | null;
 }
 
-export interface StudySession {
-  id: string;
-  userId: string;
-  groupId: string;
-  title: string;
-  category: CategoryType;
-  durationSec: number;
-  startedAt: string;
-  endedAt: string;
-  user?: User;
-}
-
-export type ResourceType = 'pdf' | 'link' | 'cheatsheet' | 'notes';
-
-export interface Resource {
-  id: string;
-  groupId: string;
-  userId: string;
-  user?: User;
-  title: string;
-  description?: string;
-  url: string;
-  type: ResourceType;
-  tags: string[];
-  fileSize?: string;
-  downloadsCount?: number;
-  createdAt: string;
-}
-
-export type ActiveTab = 'leaderboard' | 'discussions' | 'vault';
-export type TimeframeFilter = 'today' | 'week' | 'all-time';
-export type TimerMode = 'pomodoro' | 'stopwatch';
-export type TimerStatus = 'idle' | 'running' | 'paused' | 'break';
-
-export interface LeaderboardEntry {
-  rank: number;
-  user: User;
-  totalDurationSec: number;
-  sessionsCount: number;
-  streakDays: number;
-  isStudying: boolean;
-  currentTask?: string;
-}
+export type MediaTabType = 'media' | 'docs' | 'links';
