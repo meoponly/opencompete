@@ -4,15 +4,35 @@ import { useStore } from '../../lib/store';
 import { BrandLogo } from '../common/BrandLogo';
 
 export const AuthModal: React.FC = () => {
-  const { isAuthModalOpen, loginWithEmail, registerWithEmail, authLoading } = useStore();
+  const { isAuthModalOpen, loginWithEmail, registerWithEmail, loginWithGoogle, authLoading } = useStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   if (!isAuthModalOpen) return null;
+
+  const handleGoogleAuth = async () => {
+    setErrorMsg(null);
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      console.error('Google auth error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setErrorMsg('Google sign-in popup was closed.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        // Ignored
+      } else {
+        setErrorMsg(err.message || 'Google sign-in failed. Please try again.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,9 +82,9 @@ export const AuthModal: React.FC = () => {
         {/* Ambient Glow */}
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header */}
+        {/* Header with Transparent Logo */}
         <div className="flex flex-col items-center text-center mb-6">
-          <BrandLogo size={36} showText={false} />
+          <BrandLogo size={40} showText={false} />
           <h2 className="text-lg font-bold tracking-tight text-[#FAFAFA] mt-3">
             {isSignUp ? 'Create your Academic Profile' : 'Sign in to OpenCompete'}
           </h2>
@@ -83,8 +103,50 @@ export const AuthModal: React.FC = () => {
           </div>
         )}
 
-        {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Google Sign-in Button */}
+        <button
+          type="button"
+          onClick={handleGoogleAuth}
+          disabled={googleLoading || loading || authLoading}
+          className="w-full py-2.5 px-4 rounded-xl bg-[#1C1C21] border border-[#2E2E35] hover:bg-[#25252B] hover:border-white/30 text-white font-medium text-xs flex items-center justify-center gap-3 transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
+        >
+          {googleLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+          ) : (
+            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12s.45 3.84 1.25 5.42l4.03-3.15z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+              />
+            </svg>
+          )}
+          <span>Continue with Google</span>
+        </button>
+
+        {/* Divider */}
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[#222226]" />
+          </div>
+          <div className="relative flex justify-center text-[10px] uppercase font-mono">
+            <span className="bg-[#121215] px-2 text-[#71717A]">or continue with email</span>
+          </div>
+        </div>
+
+        {/* Email/Password Auth Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
             <label className="block text-[11px] uppercase font-mono tracking-wider text-[#71717A] mb-1.5">
               Email Address
@@ -97,7 +159,7 @@ export const AuthModal: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@university.edu"
-                className="w-full pl-9 pr-3 py-2.5 text-xs bg-[#09090B] border border-[#222226] focus:border-white/40 rounded-xl text-[#FAFAFA] placeholder:text-[#52525B] focus:outline-none transition-colors font-mono"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-[#09090B] border border-[#222226] focus:border-white/40 rounded-xl text-[#FAFAFA] placeholder:text-[#52525B] focus:outline-none transition-colors font-mono"
               />
             </div>
           </div>
@@ -114,7 +176,7 @@ export const AuthModal: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2.5 text-xs bg-[#09090B] border border-[#222226] focus:border-white/40 rounded-xl text-[#FAFAFA] placeholder:text-[#52525B] focus:outline-none transition-colors font-mono"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-[#09090B] border border-[#222226] focus:border-white/40 rounded-xl text-[#FAFAFA] placeholder:text-[#52525B] focus:outline-none transition-colors font-mono"
               />
             </div>
           </div>
@@ -132,7 +194,7 @@ export const AuthModal: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-[#09090B] border border-[#222226] focus:border-white/40 rounded-xl text-[#FAFAFA] placeholder:text-[#52525B] focus:outline-none transition-colors font-mono"
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-[#09090B] border border-[#222226] focus:border-white/40 rounded-xl text-[#FAFAFA] placeholder:text-[#52525B] focus:outline-none transition-colors font-mono"
                 />
               </div>
             </div>
@@ -140,7 +202,7 @@ export const AuthModal: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading || authLoading}
+            disabled={loading || googleLoading || authLoading}
             className="w-full py-2.5 px-4 rounded-xl bg-white text-black font-semibold text-xs flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-[0.99] transition-all shadow-lg disabled:opacity-50 mt-2"
           >
             {loading ? (
@@ -150,7 +212,7 @@ export const AuthModal: React.FC = () => {
               </>
             ) : (
               <>
-                <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+                <span>{isSignUp ? 'Create Account with Email' : 'Sign In with Email'}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -158,7 +220,7 @@ export const AuthModal: React.FC = () => {
         </form>
 
         {/* Toggle sign in / sign up */}
-        <div className="mt-6 pt-4 border-t border-[#222226] text-center">
+        <div className="mt-5 pt-3 border-t border-[#222226] text-center">
           <button
             type="button"
             onClick={() => {

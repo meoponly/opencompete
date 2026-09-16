@@ -21,6 +21,7 @@ import {
   auth,
   signUpUser,
   signInUser,
+  signInWithGoogle,
   logOutUser,
   saveUserProfile,
   fetchUserProfile,
@@ -46,6 +47,7 @@ interface StoreContextType {
   setIsSettingsOpen: (open: boolean) => void;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
 
@@ -299,6 +301,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const registerWithEmail = async (email: string, pass: string) => {
     await signUpUser(email, pass);
+  };
+
+  const loginWithGoogle = async () => {
+    await signInWithGoogle();
   };
 
   const logout = async () => {
@@ -659,6 +665,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setIsSettingsOpen,
         loginWithEmail,
         registerWithEmail,
+        loginWithGoogle,
         logout,
         updateUserProfile,
 
