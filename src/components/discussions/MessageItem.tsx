@@ -22,7 +22,7 @@ import { TagBadge } from '../common/TagBadge';
 
 interface MessageItemProps {
   message: Message;
-  currentUser: User;
+  currentUser: User | null;
   onJumpToReply: (messageId: string) => void;
   isHighlighted?: boolean;
 }
@@ -48,7 +48,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content || '');
 
-  const isAuthor = message.userId === currentUser.id;
+  const isAuthor = currentUser ? message.userId === currentUser.id : false;
   const isDeleted = message.isDeleted;
 
   const quickEmojis = ['👍', '❤️', '🔥', '💯', '🧠', '💀', '⚡', '👏'];
@@ -213,9 +213,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     return acc;
                   }, {})
                 ).map(([emoji, count]) => {
-                  const hasReacted = message.reactions.some(
+                  const hasReacted = currentUser ? message.reactions?.some(
                     (r) => r.userId === currentUser.id && r.emoji === emoji
-                  );
+                  ) : false;
                   return (
                     <button
                       key={emoji}
@@ -489,9 +489,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   return acc;
                 }, {})
               ).map(([emoji, count]) => {
-                const hasReacted = message.reactions.some(
+                const hasReacted = currentUser ? message.reactions?.some(
                   (r) => r.userId === currentUser.id && r.emoji === emoji
-                );
+                ) : false;
                 return (
                   <button
                     key={emoji}

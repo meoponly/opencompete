@@ -47,7 +47,9 @@ export const LeaderboardTab: React.FC = () => {
   const top3 = leaderboardEntries.slice(0, 3);
   const remaining = leaderboardEntries.slice(3);
 
-  const currentUserEntry = leaderboardEntries.find((e) => e.user.id === currentUser.id);
+  const currentUserEntry = currentUser
+    ? leaderboardEntries.find((e) => e.user.id === currentUser.id)
+    : null;
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#09090B] space-y-6 custom-scrollbar">
@@ -209,7 +211,7 @@ export const LeaderboardTab: React.FC = () => {
 
         <div className="divide-y divide-[#222226]">
           {leaderboardEntries.map((entry) => {
-            const isMe = entry.user.id === currentUser.id;
+            const isMe = currentUser ? entry.user.id === currentUser.id : false;
             return (
               <div
                 key={entry.user.id}

@@ -1,6 +1,23 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { getDatabase, ref, set, onValue, push, serverTimestamp, update, remove } from 'firebase/database';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from 'firebase/auth';
+import {
+  getDatabase,
+  ref,
+  set,
+  get,
+  onValue,
+  push,
+  update,
+  remove,
+} from 'firebase/database';
+import { User } from '../types';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDvyIQNVjXPnVnYQWIcPrr5lrEAKbGr54k',
@@ -17,35 +34,93 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 export const auth = getAuth(app);
 export const db = getDatabase(app);
 
-// Authentication helper (anonymously or persistent custom token)
-export async function initFirebaseAuth(callback?: (user: FirebaseUser | null) => void) {
+// Auth Service
+export async function signUpUser(email: string, pass: string): Promise<FirebaseUser> {
+  const cred = await createUserWithEmailAndPassword(auth, email, pass);
+  return cred.user;
+}
+
+export async function signInUser(email: string, pass: string): Promise<FirebaseUser> {
+  const cred = await signInWithEmailAndPassword(auth, email, pass);
+  return cred.user;
+}
+
+export async function logOutUser(): Promise<void> {
+  await signOut(auth);
+}
+
+// User Profile Database Service
+export async function saveUserProfile(user: User): Promise<void> {
   try {
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        signInAnonymously(auth).catch((err) => {
-          console.warn('Firebase anonymous sign in notice:', err);
-        });
-      }
-      if (callback) callback(user);
+    const userRef = ref(db, `users/${user.id}`);
+    await set(userRef, {
+      id: user.id,
+      email: user.email || '',
+      username: user.username,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl || '',
+      bio: user.bio || '',
+      themePreference: user.themePreference || 'dark',
+      streakDays: user.streakDays || 0,
+      isOnline: true,
+      isStudying: user.isStudying || false,
+      currentTask: user.currentTask || '',
+      currentCategory: user.currentCategory || '',
+      updatedAt: new Date().toISOString(),
+      createdAt: user.createdAt || new Date().toISOString(),
     });
-  } catch (error) {
-    console.warn('Firebase auth initialization warning:', error);
+  } catch (err) {
+    console.warn('Firebase saveUserProfile warning:', err);
   }
 }
 
-// Realtime Database listeners with error handling
+export async function fetchUserProfile(uid: string): Promise<User | null> {
+  try {
+    const userRef = ref(db, `users/${uid}`);
+    const snapshot = await get(userRef);
+    if (snapshot.exists()) {
+      return snapshot.val() as User;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Firebase fetchUserProfile warning:', err);
+    return null;
+  }
+}
+
+export function subscribeToAllUsers(callback: (users: User[]) => void) {
+  try {
+    const usersRef = ref(db, 'users');
+    return onValue(usersRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        const list: User[] = Object.values(val);
+        callback(list);
+      } else {
+        callback([]);
+      }
+    }, (error) => {
+      console.warn('Users realtime sync warning:', error);
+    });
+  } catch (e) {
+    return () => {};
+  }
+}
+
+// Realtime Discussions & Sessions
 export function subscribeToSquadMessages(groupId: string, callback: (data: any) => void) {
   try {
     const messagesRef = ref(db, `squads/${groupId}/messages`);
     return onValue(messagesRef, (snapshot) => {
       if (snapshot.exists()) {
         callback(snapshot.val());
+      } else {
+        callback({});
       }
     }, (error) => {
-      console.warn('Realtime sync fallback to local store:', error);
+      console.warn('Realtime sync fallback:', error);
     });
   } catch (e) {
-    console.warn('Realtime database subscription error:', e);
     return () => {};
   }
 }
@@ -56,6 +131,8 @@ export function subscribeToSquadSessions(groupId: string, callback: (data: any) 
     return onValue(sessionsRef, (snapshot) => {
       if (snapshot.exists()) {
         callback(snapshot.val());
+      } else {
+        callback({});
       }
     }, (error) => {
       console.warn('Sessions sync fallback:', error);
@@ -76,8 +153,17 @@ export async function pushRealtimeMessage(groupId: string, message: any) {
     });
     return newMsgRef.key;
   } catch (error) {
-    console.warn('Push message to Firebase RTDB fallback:', error);
+    console.warn('Push message fallback:', error);
     return null;
+  }
+}
+
+export async function updateRealtimeMessage(groupId: string, messageId: string, updates: any) {
+  try {
+    const msgRef = ref(db, `squads/${groupId}/messages/${messageId}`);
+    await update(msgRef, updates);
+  } catch (error) {
+    console.warn('Update message fallback:', error);
   }
 }
 
@@ -92,7 +178,40 @@ export async function pushRealtimeSession(groupId: string, session: any) {
     });
     return newSessionRef.key;
   } catch (error) {
-    console.warn('Push session to Firebase RTDB fallback:', error);
+    console.warn('Push session fallback:', error);
     return null;
+  }
+}
+
+export async function pushRealtimeResource(groupId: string, resource: any) {
+  try {
+    const resourcesRef = ref(db, `squads/${groupId}/resources`);
+    const newResRef = push(resourcesRef);
+    await set(newResRef, {
+      ...resource,
+      id: newResRef.key,
+      createdAt: new Date().toISOString(),
+    });
+    return newResRef.key;
+  } catch (error) {
+    console.warn('Push resource fallback:', error);
+    return null;
+  }
+}
+
+export function subscribeToSquadResources(groupId: string, callback: (data: any) => void) {
+  try {
+    const resourcesRef = ref(db, `squads/${groupId}/resources`);
+    return onValue(resourcesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.val());
+      } else {
+        callback({});
+      }
+    }, (error) => {
+      console.warn('Resources sync fallback:', error);
+    });
+  } catch (e) {
+    return () => {};
   }
 }

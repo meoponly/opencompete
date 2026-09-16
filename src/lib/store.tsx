@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import {
   User,
   Community,
@@ -14,22 +15,45 @@ import {
   LeaderboardEntry,
   Attachment,
 } from '../types';
-import {
-  CURRENT_USER,
-  MOCK_USERS,
-  MOCK_COMMUNITIES,
-  MOCK_GROUPS,
-  MOCK_SESSIONS,
-  MOCK_MESSAGES,
-  MOCK_RESOURCES,
-} from './mockData';
+import { INITIAL_COMMUNITIES, INITIAL_GROUPS } from './mockData';
 import { soundEngine } from './audio';
-import { initFirebaseAuth, pushRealtimeMessage, pushRealtimeSession } from './firebase';
+import {
+  auth,
+  signUpUser,
+  signInUser,
+  logOutUser,
+  saveUserProfile,
+  fetchUserProfile,
+  subscribeToAllUsers,
+  subscribeToSquadMessages,
+  subscribeToSquadSessions,
+  subscribeToSquadResources,
+  pushRealtimeMessage,
+  updateRealtimeMessage,
+  pushRealtimeSession,
+  pushRealtimeResource,
+} from './firebase';
 
 interface StoreContextType {
-  // Navigation & Hierarchy
-  currentUser: User;
-  setCurrentUser: (user: User) => void;
+  // Auth & Profile
+  currentUser: User | null;
+  authLoading: boolean;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  isOnboardingOpen: boolean;
+  setIsOnboardingOpen: (open: boolean) => void;
+  isSettingsOpen: boolean;
+  setIsSettingsOpen: (open: boolean) => void;
+  loginWithEmail: (email: string, pass: string) => Promise<void>;
+  registerWithEmail: (email: string, pass: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUserProfile: (data: Partial<User>) => Promise<void>;
+
+  // Theme & Preferences
+  theme: 'dark' | 'light';
+  setTheme: (t: 'dark' | 'light') => void;
+
+  // Navigation & Communities
   communities: Community[];
   selectedCommunity: Community;
   setSelectedCommunity: (c: Community) => void;
@@ -40,7 +64,7 @@ interface StoreContextType {
   setActiveTab: (tab: ActiveTab) => void;
   allUsers: User[];
 
-  // Timer & Focus State
+  // Focus Timer
   timerMode: TimerMode;
   setTimerMode: (m: TimerMode) => void;
   timerStatus: TimerStatus;
@@ -61,7 +85,7 @@ interface StoreContextType {
   resetTimer: () => void;
   completeTimerSession: () => void;
 
-  // Discussions Chat State
+  // Discussions Chat
   messages: Message[];
   typingUsers: string[];
   replyingToMessage: Message | null;
@@ -72,19 +96,19 @@ interface StoreContextType {
   togglePinMessage: (messageId: string) => void;
   toggleReaction: (messageId: string, emoji: string) => void;
 
-  // Vault State
+  // Resource Vault
   resources: Resource[];
   addResource: (resource: Omit<Resource, 'id' | 'createdAt' | 'userId' | 'user' | 'downloadsCount' | 'groupId'>) => void;
   deleteResource: (id: string) => void;
 
-  // Leaderboard Data
+  // Leaderboard
   timeframe: TimeframeFilter;
   setTimeframe: (tf: TimeframeFilter) => void;
   selectedCategoryFilter: string;
   setSelectedCategoryFilter: (cat: string) => void;
   leaderboardEntries: LeaderboardEntry[];
 
-  // UI Lightbox / Modals
+  // Media Modals
   previewImage: string | null;
   setPreviewImage: (url: string | null) => void;
   previewVideo: string | null;
@@ -96,86 +120,164 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // User & Navigation
-  const [currentUser, setCurrentUser] = useState<User>(() => {
+  // Auth state
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('opencompete_user');
-    return saved ? JSON.parse(saved) : CURRENT_USER;
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // Theme state
+  const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem('opencompete_theme');
+    return (saved as 'dark' | 'light') || 'dark';
   });
 
-  const [communities] = useState<Community[]>(MOCK_COMMUNITIES);
-  const [selectedCommunity, setSelectedCommunity] = useState<Community>(MOCK_COMMUNITIES[0]);
-  
-  const [groups, setGroups] = useState<Group[]>(MOCK_GROUPS);
+  const setTheme = (t: 'dark' | 'light') => {
+    setThemeState(t);
+    localStorage.setItem('opencompete_theme', t);
+    if (t === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  };
+
+  useEffect(() => {
+    setTheme(theme);
+  }, []);
+
+  // Navigation
+  const [communities] = useState<Community[]>(INITIAL_COMMUNITIES);
+  const [selectedCommunity, setSelectedCommunity] = useState<Community>(INITIAL_COMMUNITIES[0]);
+  const [groups, setGroups] = useState<Group[]>(INITIAL_GROUPS);
   const [selectedGroup, setSelectedGroup] = useState<Group>(() => {
-    return MOCK_GROUPS.find((g) => g.communityId === MOCK_COMMUNITIES[0].id) || MOCK_GROUPS[0];
+    return INITIAL_GROUPS.find((g) => g.communityId === INITIAL_COMMUNITIES[0].id) || INITIAL_GROUPS[0];
   });
-
   const [activeTab, setActiveTab] = useState<ActiveTab>('discussions');
-  const [allUsers, setAllUsers] = useState<User[]>(MOCK_USERS);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   // Focus Timer
   const [timerMode, setTimerMode] = useState<TimerMode>('pomodoro');
   const [timerStatus, setTimerStatus] = useState<TimerStatus>('idle');
   const [timerSeconds, setTimerSeconds] = useState<number>(0);
-  const [timerTargetSeconds, setTimerTargetSeconds] = useState<number>(25 * 60); // 25 mins default
-  const [timerTaskTitle, setTimerTaskTitle] = useState<string>('Quantum Angular Momentum Derivations');
+  const [timerTargetSeconds, setTimerTargetSeconds] = useState<number>(25 * 60);
+  const [timerTaskTitle, setTimerTaskTitle] = useState<string>('Focused Study Session');
   const [timerCategory, setTimerCategory] = useState<CategoryType>('Practice');
   const [isTimerModalOpen, setIsTimerModalOpen] = useState<boolean>(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
 
-  // Discussions State
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem('opencompete_messages');
-    return saved ? JSON.parse(saved) : MOCK_MESSAGES;
-  });
+  // Discussions, Sessions & Vault
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sessions, setSessions] = useState<StudySession[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
-
-  // Sessions & Vault
-  const [sessions, setSessions] = useState<StudySession[]>(() => {
-    const saved = localStorage.getItem('opencompete_sessions');
-    return saved ? JSON.parse(saved) : MOCK_SESSIONS;
-  });
-
-  const [resources, setResources] = useState<Resource[]>(() => {
-    const saved = localStorage.getItem('opencompete_resources');
-    return saved ? JSON.parse(saved) : MOCK_RESOURCES;
-  });
 
   // Leaderboard filters
   const [timeframe, setTimeframe] = useState<TimeframeFilter>('today');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('All');
 
-  // Media preview modals
+  // Media Modals
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewVideo, setPreviewVideo] = useState<string | null>(null);
   const [isAddResourceOpen, setIsAddResourceOpen] = useState<boolean>(false);
 
-  // Sync with localStorage
+  // Listen to Firebase Auth state
   useEffect(() => {
-    localStorage.setItem('opencompete_user', JSON.stringify(currentUser));
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('opencompete_messages', JSON.stringify(messages));
-  }, [messages]);
-
-  useEffect(() => {
-    localStorage.setItem('opencompete_sessions', JSON.stringify(sessions));
-  }, [sessions]);
-
-  useEffect(() => {
-    localStorage.setItem('opencompete_resources', JSON.stringify(resources));
-  }, [resources]);
-
-  // Firebase auth initialization
-  useEffect(() => {
-    initFirebaseAuth((fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+      setAuthLoading(true);
       if (fbUser) {
-        console.log('Firebase ready with user:', fbUser.uid);
+        // Fetch or create profile
+        const profile = await fetchUserProfile(fbUser.uid);
+        if (profile && profile.fullName && profile.username) {
+          setCurrentUser(profile);
+          setIsAuthModalOpen(false);
+          setIsOnboardingOpen(false);
+          localStorage.setItem('opencompete_user', JSON.stringify(profile));
+        } else {
+          // Incomplete profile -> trigger onboarding
+          const initialUser: User = {
+            id: fbUser.uid,
+            email: fbUser.email || '',
+            username: fbUser.email?.split('@')[0] || `student_${fbUser.uid.slice(0, 5)}`,
+            fullName: fbUser.displayName || '',
+            avatarUrl: fbUser.photoURL || '',
+            streakDays: 0,
+            isOnline: true,
+            createdAt: new Date().toISOString(),
+          };
+          setCurrentUser(initialUser);
+          setIsAuthModalOpen(false);
+          setIsOnboardingOpen(true);
+        }
+      } else {
+        setCurrentUser(null);
+        localStorage.removeItem('opencompete_user');
+        setIsAuthModalOpen(true);
+      }
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Listen to all users in Firebase
+  useEffect(() => {
+    const unsub = subscribeToAllUsers((usersList) => {
+      if (usersList && usersList.length > 0) {
+        setAllUsers(usersList);
+      } else if (currentUser) {
+        setAllUsers([currentUser]);
       }
     });
-  }, []);
+    return () => unsub();
+  }, [currentUser?.id]);
+
+  // Listen to Realtime Messages in selected group
+  useEffect(() => {
+    const unsub = subscribeToSquadMessages(selectedGroup.id, (data) => {
+      if (data && typeof data === 'object') {
+        const msgList: Message[] = Object.values(data);
+        msgList.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        setMessages(msgList);
+      } else {
+        setMessages([]);
+      }
+    });
+    return () => unsub();
+  }, [selectedGroup.id]);
+
+  // Listen to Realtime Sessions in selected group
+  useEffect(() => {
+    const unsub = subscribeToSquadSessions(selectedGroup.id, (data) => {
+      if (data && typeof data === 'object') {
+        const sessList: StudySession[] = Object.values(data);
+        setSessions(sessList);
+      } else {
+        setSessions([]);
+      }
+    });
+    return () => unsub();
+  }, [selectedGroup.id]);
+
+  // Listen to Realtime Resources in selected group
+  useEffect(() => {
+    const unsub = subscribeToSquadResources(selectedGroup.id, (data) => {
+      if (data && typeof data === 'object') {
+        const resList: Resource[] = Object.values(data);
+        setResources(resList);
+      } else {
+        setResources([]);
+      }
+    });
+    return () => unsub();
+  }, [selectedGroup.id]);
 
   // Update selected group when community changes
   useEffect(() => {
@@ -189,6 +291,33 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => {
     soundEngine.setMuted(!isSoundEnabled);
   }, [isSoundEnabled]);
+
+  // Auth Operations
+  const loginWithEmail = async (email: string, pass: string) => {
+    await signInUser(email, pass);
+  };
+
+  const registerWithEmail = async (email: string, pass: string) => {
+    await signUpUser(email, pass);
+  };
+
+  const logout = async () => {
+    await logOutUser();
+    setCurrentUser(null);
+    setIsAuthModalOpen(true);
+  };
+
+  const updateUserProfile = async (data: Partial<User>) => {
+    if (!currentUser) return;
+    const updated: User = {
+      ...currentUser,
+      ...data,
+    };
+    setCurrentUser(updated);
+    localStorage.setItem('opencompete_user', JSON.stringify(updated));
+    await saveUserProfile(updated);
+    setIsOnboardingOpen(false);
+  };
 
   // Timer Tick Engine
   useEffect(() => {
@@ -213,26 +342,21 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
   }, [timerStatus, timerMode, timerTargetSeconds]);
 
-  // Simulated peer typing & activity
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setTypingUsers(['Elena Rostova']);
-      setTimeout(() => {
-        setTypingUsers([]);
-      }, 4000);
-    }, 15000);
-    return () => clearTimeout(timeout);
-  }, [selectedGroup.id]);
-
   // Timer actions
   const startTimer = () => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setTimerStatus('running');
-    setCurrentUser((prev) => ({
-      ...prev,
+    const updatedUser = {
+      ...currentUser,
       isStudying: true,
       currentTask: timerTaskTitle,
       currentCategory: timerCategory,
-    }));
+    };
+    setCurrentUser(updatedUser);
+    saveUserProfile(updatedUser);
     soundEngine.playFocusStart();
   };
 
@@ -247,13 +371,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const resetTimer = () => {
     setTimerStatus('idle');
     setTimerSeconds(0);
-    setCurrentUser((prev) => ({
-      ...prev,
-      isStudying: false,
-    }));
+    if (currentUser) {
+      const updatedUser = {
+        ...currentUser,
+        isStudying: false,
+      };
+      setCurrentUser(updatedUser);
+      saveUserProfile(updatedUser);
+    }
   };
 
   const completeTimerSession = () => {
+    if (!currentUser) return;
     const duration = timerSeconds > 0 ? timerSeconds : (timerMode === 'pomodoro' ? timerTargetSeconds : 1500);
     soundEngine.playSessionComplete();
 
@@ -288,25 +417,25 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         endedAt: newSession.endedAt,
       },
       createdAt: new Date().toISOString(),
-      reactions: [
-        { id: `r_${Date.now()}`, messageId: `msg_${Date.now()}`, userId: 'user_1', userName: 'Elena Rostova', emoji: '🔥' },
-      ],
+      reactions: [],
     };
 
     setMessages((prev) => [...prev, broadcastMsg]);
     pushRealtimeMessage(selectedGroup.id, broadcastMsg);
 
-    // Reset timer
+    // Reset timer & update user streak
     setTimerStatus('idle');
     setTimerSeconds(0);
-    setCurrentUser((prev) => ({
-      ...prev,
+    const updatedUser: User = {
+      ...currentUser,
       isStudying: false,
-      streakDays: prev.streakDays + 1,
-    }));
+      streakDays: (currentUser.streakDays || 0) + 1,
+    };
+    setCurrentUser(updatedUser);
+    saveUserProfile(updatedUser);
   };
 
-  // Discussion Actions
+  // Discussions Chat Actions
   const parseLinkPreview = (text: string) => {
     const urlMatch = text.match(/(https?:\/\/[^\s]+)/g);
     if (!urlMatch) return null;
@@ -329,7 +458,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  const sendMessage = (content: string, attachments?: Attachment[]) => {
+  const sendMessage = async (content: string, attachments?: Attachment[]) => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
 
     soundEngine.playMessageSent();
@@ -358,77 +491,77 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     setMessages((prev) => [...prev, newMsg]);
     setReplyingToMessage(null);
-    pushRealtimeMessage(selectedGroup.id, newMsg);
+    await pushRealtimeMessage(selectedGroup.id, newMsg);
   };
 
-  const editMessage = (messageId: string, newContent: string) => {
+  const editMessage = async (messageId: string, newContent: string) => {
     const linkPreview = parseLinkPreview(newContent);
+    const updates = {
+      content: newContent,
+      isEdited: true,
+      linkPreview,
+      updatedAt: new Date().toISOString(),
+    };
     setMessages((prev) =>
-      prev.map((m) =>
-        m.id === messageId
-          ? {
-              ...m,
-              content: newContent,
-              isEdited: true,
-              linkPreview,
-              updatedAt: new Date().toISOString(),
-            }
-          : m
-      )
+      prev.map((m) => (m.id === messageId ? { ...m, ...updates } : m))
     );
+    await updateRealtimeMessage(selectedGroup.id, messageId, updates);
   };
 
-  const deleteMessage = (messageId: string) => {
+  const deleteMessage = async (messageId: string) => {
+    const updates = {
+      isDeleted: true,
+      content: null,
+      attachments: [],
+      linkPreview: null,
+    };
     setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id === messageId) {
-          return {
-            ...m,
-            isDeleted: true,
-            content: null,
-            attachments: [],
-            linkPreview: null,
-          };
-        }
-        return m;
-      })
+      prev.map((m) => (m.id === messageId ? { ...m, ...updates } : m))
     );
+    await updateRealtimeMessage(selectedGroup.id, messageId, updates);
   };
 
-  const togglePinMessage = (messageId: string) => {
+  const togglePinMessage = async (messageId: string) => {
+    const target = messages.find((m) => m.id === messageId);
+    if (!target) return;
+    const newPinned = !target.isPinned;
     setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, isPinned: !m.isPinned } : m))
+      prev.map((m) => (m.id === messageId ? { ...m, isPinned: newPinned } : m))
     );
+    await updateRealtimeMessage(selectedGroup.id, messageId, { isPinned: newPinned });
   };
 
-  const toggleReaction = (messageId: string, emoji: string) => {
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!currentUser) return;
     soundEngine.playMessageReceived();
+
+    const target = messages.find((m) => m.id === messageId);
+    if (!target) return;
+
+    const exists = target.reactions?.find((r) => r.userId === currentUser.id && r.emoji === emoji);
+    let newReactions = target.reactions ? [...target.reactions] : [];
+
+    if (exists) {
+      newReactions = newReactions.filter((r) => !(r.userId === currentUser.id && r.emoji === emoji));
+    } else {
+      newReactions.push({
+        id: `r_${Date.now()}`,
+        messageId,
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        emoji,
+      });
+    }
+
     setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== messageId) return m;
-        const exists = m.reactions.find((r) => r.userId === currentUser.id && r.emoji === emoji);
-        let newReactions;
-        if (exists) {
-          newReactions = m.reactions.filter((r) => !(r.userId === currentUser.id && r.emoji === emoji));
-        } else {
-          newReactions = [
-            ...m.reactions,
-            {
-              id: `r_${Date.now()}`,
-              messageId,
-              userId: currentUser.id,
-              userName: currentUser.fullName,
-              emoji,
-            },
-          ];
-        }
-        return { ...m, reactions: newReactions };
-      })
+      prev.map((m) => (m.id === messageId ? { ...m, reactions: newReactions } : m))
     );
+    await updateRealtimeMessage(selectedGroup.id, messageId, { reactions: newReactions });
   };
 
   // Vault Actions
-  const addResource = (resData: Omit<Resource, 'id' | 'createdAt' | 'userId' | 'user' | 'downloadsCount' | 'groupId'>) => {
+  const addResource = async (resData: Omit<Resource, 'id' | 'createdAt' | 'userId' | 'user' | 'downloadsCount' | 'groupId'>) => {
+    if (!currentUser) return;
     const newRes: Resource = {
       ...resData,
       id: `res_${Date.now()}`,
@@ -440,17 +573,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
     setResources((prev) => [newRes, ...prev]);
     setIsAddResourceOpen(false);
+    await pushRealtimeResource(selectedGroup.id, newRes);
   };
 
   const deleteResource = (id: string) => {
     setResources((prev) => prev.filter((r) => r.id !== id));
   };
 
-  // Computed Leaderboard Entries
+  // Leaderboard Computations
   const computeLeaderboard = (): LeaderboardEntry[] => {
     const userTotals: { [userId: string]: { duration: number; count: number } } = {};
 
-    // Group sessions for the selected group
     const relevantSessions = sessions.filter((s) => {
       if (s.groupId !== selectedGroup.id) return false;
       if (selectedCategoryFilter !== 'All' && s.category !== selectedCategoryFilter) return false;
@@ -465,7 +598,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         weekAgo.setDate(now.getDate() - 7);
         return sessionDate >= weekAgo;
       }
-      return true; // all-time
+      return true;
     });
 
     relevantSessions.forEach((s) => {
@@ -476,21 +609,28 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       userTotals[s.userId].count += 1;
     });
 
-    const entries: LeaderboardEntry[] = allUsers.map((u) => {
+    const userMap: { [id: string]: User } = {};
+    if (currentUser) {
+      userMap[currentUser.id] = currentUser;
+    }
+    allUsers.forEach((u) => {
+      userMap[u.id] = u;
+    });
+
+    const entries: LeaderboardEntry[] = Object.values(userMap).map((u) => {
       const stats = userTotals[u.id] || { duration: 0, count: 0 };
-      const isStudyingNow = u.id === currentUser.id ? currentUser.isStudying || false : (u.isStudying || false);
+      const isStudyingNow = u.id === currentUser?.id ? currentUser?.isStudying || false : (u.isStudying || false);
       return {
         rank: 0,
-        user: u.id === currentUser.id ? currentUser : u,
+        user: u.id === currentUser?.id ? currentUser : u,
         totalDurationSec: stats.duration,
         sessionsCount: stats.count,
-        streakDays: u.streakDays,
+        streakDays: u.streakDays || 0,
         isStudying: isStudyingNow,
-        currentTask: u.id === currentUser.id ? currentUser.currentTask : u.currentTask,
+        currentTask: u.id === currentUser?.id ? currentUser?.currentTask : u.currentTask,
       };
     });
 
-    // Sort by duration descending, then streak
     entries.sort((a, b) => {
       if (b.totalDurationSec !== a.totalDurationSec) {
         return b.totalDurationSec - a.totalDurationSec;
@@ -510,7 +650,21 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     <StoreContext.Provider
       value={{
         currentUser,
-        setCurrentUser,
+        authLoading,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        isOnboardingOpen,
+        setIsOnboardingOpen,
+        isSettingsOpen,
+        setIsSettingsOpen,
+        loginWithEmail,
+        registerWithEmail,
+        logout,
+        updateUserProfile,
+
+        theme,
+        setTheme,
+
         communities,
         selectedCommunity,
         setSelectedCommunity,
@@ -541,7 +695,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         resetTimer,
         completeTimerSession,
 
-        messages: messages.filter((m) => m.groupId === selectedGroup.id),
+        messages,
         typingUsers,
         replyingToMessage,
         setReplyingToMessage,
@@ -551,7 +705,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         togglePinMessage,
         toggleReaction,
 
-        resources: resources.filter((r) => r.groupId === selectedGroup.id),
+        resources,
         addResource,
         deleteResource,
 

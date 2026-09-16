@@ -5,17 +5,14 @@ import {
   Activity,
   ChevronDown,
   Hash,
-  Users,
   Plus,
   Compass,
   Timer,
-  CheckCircle,
-  Sparkles,
-  Layers,
   Settings,
+  LogIn,
 } from 'lucide-react';
 import { useStore } from '../../lib/store';
-import { EmblemLogo } from '../common/EmblemLogo';
+import { BrandLogo } from '../common/BrandLogo';
 import { UserAvatar } from '../common/UserAvatar';
 
 export const Sidebar: React.FC = () => {
@@ -28,6 +25,8 @@ export const Sidebar: React.FC = () => {
     setSelectedGroup,
     currentUser,
     setIsTimerModalOpen,
+    setIsSettingsOpen,
+    setIsAuthModalOpen,
     timerStatus,
   } = useStore();
 
@@ -48,9 +47,9 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="w-64 h-full flex flex-col bg-[#09090B] border-r border-[#222226] select-none flex-shrink-0">
-      {/* Platform Branding */}
+      {/* Platform Branding using actual Logo */}
       <div className="p-4 border-b border-[#222226]">
-        <EmblemLogo size={20} />
+        <BrandLogo size={22} />
       </div>
 
       {/* Level 1: Community Switcher */}
@@ -99,7 +98,7 @@ export const Sidebar: React.FC = () => {
                 <div className="flex flex-col truncate">
                   <span className="truncate">{comm.name}</span>
                   <span className="text-[10px] text-[#71717A] truncate font-mono">
-                    {comm.groupCount || 3} squads active
+                    {comm.groupCount || 2} squads active
                   </span>
                 </div>
               </button>
@@ -145,15 +144,15 @@ export const Sidebar: React.FC = () => {
                     <span className="text-xs truncate">{grp.name}</span>
                   </div>
 
-                  {/* Active studying indicators */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0 pl-1.5">
-                    {grp.activeStudyingCount > 0 && (
+                  {/* Active studying count */}
+                  {grp.activeStudyingCount > 0 && (
+                    <div className="flex items-center gap-1.5 flex-shrink-0 pl-1.5">
                       <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-800/40">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         {grp.activeStudyingCount}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -188,29 +187,44 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Current User Profile Bar */}
+      {/* User Profile Card & Settings Bar at Bottom (Gemini Style) */}
       <div className="p-3 border-t border-[#222226] bg-[#09090B]">
-        <div className="flex items-center justify-between p-2 rounded-xl bg-[#121215] border border-[#222226]">
-          <div className="flex items-center gap-2.5 truncate">
-            <UserAvatar user={currentUser} size="sm" showStatus />
-            <div className="flex flex-col truncate">
-              <span className="text-xs font-semibold text-[#FAFAFA] truncate">
-                {currentUser.fullName}
-              </span>
-              <span className="text-[10px] font-mono text-[#71717A] truncate">
-                @{currentUser.username}
-              </span>
+        {currentUser ? (
+          <div className="flex items-center justify-between p-2 rounded-xl bg-[#121215] border border-[#222226] hover:border-[#2E2E35] transition-all">
+            {/* Clickable user profile trigger */}
+            <div
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-2.5 truncate flex-1 cursor-pointer group"
+            >
+              <UserAvatar user={currentUser} size="sm" showStatus />
+              <div className="flex flex-col truncate">
+                <span className="text-xs font-semibold text-[#FAFAFA] group-hover:text-white truncate">
+                  {currentUser.fullName || currentUser.username}
+                </span>
+                <span className="text-[10px] font-mono text-[#71717A] truncate">
+                  @{currentUser.username}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div
-            title={`Current Streak: ${currentUser.streakDays} Days`}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/40 border border-amber-800/40 text-amber-300 font-mono text-[11px] font-semibold flex-shrink-0"
-          >
-            <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
-            <span>{currentUser.streakDays}d</span>
+            {/* Settings Cog Icon Button */}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              title="Open Settings"
+              className="p-1.5 rounded-lg text-[#71717A] hover:text-[#FAFAFA] hover:bg-[#1C1C21] transition-colors flex-shrink-0"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
-        </div>
+        ) : (
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="w-full py-2 px-3 rounded-xl bg-[#121215] border border-[#222226] hover:border-white/40 text-white font-medium text-xs flex items-center justify-center gap-2 transition-all"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Sign In / Register</span>
+          </button>
+        )}
       </div>
     </aside>
   );

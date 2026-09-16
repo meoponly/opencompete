@@ -169,7 +169,7 @@ export const ResourceVaultTab: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {filteredResources.map((res) => {
-            const isOwner = res.userId === currentUser.id;
+            const isOwner = currentUser ? res.userId === currentUser.id : false;
             return (
               <div
                 key={res.id}
@@ -235,9 +235,9 @@ export const ResourceVaultTab: React.FC = () => {
                 {/* Bottom Row: Uploader and Action Button */}
                 <div className="mt-4 pt-3 border-t border-[#222226] flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <UserAvatar user={res.user || currentUser} size="xs" showStatus={false} />
+                    <UserAvatar user={res.user || currentUser || { fullName: 'Member' }} size="xs" showStatus={false} />
                     <span className="text-[10px] font-mono text-[#71717A]">
-                      {res.user?.fullName || currentUser.fullName}
+                      {res.user?.fullName || currentUser?.fullName || 'Squad Member'}
                     </span>
                   </div>
 

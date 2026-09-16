@@ -1,77 +1,6 @@
-import { User, Community, Group, Message, Resource, StudySession } from '../types';
+import { Community, Group, Message, Resource, StudySession } from '../types';
 
-export const CURRENT_USER: User = {
-  id: 'user_me',
-  username: 'meoponly',
-  fullName: 'Marcus Vance',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  isOnline: true,
-  isStudying: false,
-  streakDays: 14,
-  createdAt: '2026-01-10T08:00:00Z',
-};
-
-export const MOCK_USERS: User[] = [
-  CURRENT_USER,
-  {
-    id: 'user_1',
-    username: 'elena_phys',
-    fullName: 'Elena Rostova',
-    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-    isOnline: true,
-    isStudying: true,
-    currentTask: 'Lagrangian Mechanics Problem 4.12',
-    currentCategory: 'Theory',
-    streakDays: 28,
-    createdAt: '2026-01-02T10:00:00Z',
-  },
-  {
-    id: 'user_2',
-    username: 'chen_quant',
-    fullName: 'Chen Wei',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isOnline: true,
-    isStudying: true,
-    currentTask: 'Distributed Consensus & Raft Implementation',
-    currentCategory: 'Practice',
-    streakDays: 42,
-    createdAt: '2025-12-15T09:30:00Z',
-  },
-  {
-    id: 'user_3',
-    username: 'sophia_med',
-    fullName: 'Sophia Al-Mansoor',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    isOnline: true,
-    isStudying: false,
-    streakDays: 19,
-    createdAt: '2026-01-20T11:00:00Z',
-  },
-  {
-    id: 'user_4',
-    username: 'devon_algo',
-    fullName: 'Devon Kripke',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    isOnline: false,
-    isStudying: false,
-    streakDays: 9,
-    createdAt: '2026-02-01T14:20:00Z',
-  },
-  {
-    id: 'user_5',
-    username: 'priya_math',
-    fullName: 'Priya Sharma',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    isOnline: true,
-    isStudying: true,
-    currentTask: 'Real Analysis - Compact Metric Spaces',
-    currentCategory: 'Deep Work',
-    streakDays: 35,
-    createdAt: '2025-11-20T16:00:00Z',
-  },
-];
-
-export const MOCK_COMMUNITIES: Community[] = [
+export const INITIAL_COMMUNITIES: Community[] = [
   {
     id: 'comm_1',
     name: 'JEE Advanced 2027',
@@ -79,7 +8,7 @@ export const MOCK_COMMUNITIES: Community[] = [
     description: 'Top-tier cohort grinding Physics, Chemistry & Mathematics for IIT-JEE.',
     iconName: 'Flame',
     createdAt: '2026-01-01T00:00:00Z',
-    groupCount: 4,
+    groupCount: 2,
   },
   {
     id: 'comm_2',
@@ -88,7 +17,7 @@ export const MOCK_COMMUNITIES: Community[] = [
     description: 'Competitive programming, systems engineering, distributed computing & ICPC.',
     iconName: 'Terminal',
     createdAt: '2026-01-05T00:00:00Z',
-    groupCount: 3,
+    groupCount: 2,
   },
   {
     id: 'comm_3',
@@ -97,19 +26,19 @@ export const MOCK_COMMUNITIES: Community[] = [
     description: 'Anki power users, pathology & pharmacology mastery group.',
     iconName: 'Activity',
     createdAt: '2026-01-12T00:00:00Z',
-    groupCount: 3,
+    groupCount: 1,
   },
 ];
 
-export const MOCK_GROUPS: Group[] = [
+export const INITIAL_GROUPS: Group[] = [
   {
     id: 'grp_1',
     communityId: 'comm_1',
     name: 'Quantum Mechanics & Rotational Squad',
     description: 'Irodov, Pathfinder, and Advanced 20-year past papers.',
     createdAt: '2026-01-02T00:00:00Z',
-    membersCount: 18,
-    activeStudyingCount: 4,
+    membersCount: 0,
+    activeStudyingCount: 0,
   },
   {
     id: 'grp_2',
@@ -117,8 +46,8 @@ export const MOCK_GROUPS: Group[] = [
     name: 'Organic Reaction Mechanisms',
     description: 'Solomons, Clayden & multistep synthesis challenges.',
     createdAt: '2026-01-03T00:00:00Z',
-    membersCount: 14,
-    activeStudyingCount: 2,
+    membersCount: 0,
+    activeStudyingCount: 0,
   },
   {
     id: 'grp_3',
@@ -126,8 +55,8 @@ export const MOCK_GROUPS: Group[] = [
     name: 'Distributed Systems & Raft',
     description: 'MIT 6.824 labs, Paxos, Raft, and high-throughput LSM Trees.',
     createdAt: '2026-01-06T00:00:00Z',
-    membersCount: 22,
-    activeStudyingCount: 5,
+    membersCount: 0,
+    activeStudyingCount: 0,
   },
   {
     id: 'grp_4',
@@ -135,8 +64,8 @@ export const MOCK_GROUPS: Group[] = [
     name: 'Hard Dynamic Programming',
     description: 'Digit DP, Tree DP, SOS DP, and Game Theory problems.',
     createdAt: '2026-01-08T00:00:00Z',
-    membersCount: 19,
-    activeStudyingCount: 3,
+    membersCount: 0,
+    activeStudyingCount: 0,
   },
   {
     id: 'grp_5',
@@ -144,216 +73,7 @@ export const MOCK_GROUPS: Group[] = [
     name: 'High-Yield Renal Pathology',
     description: 'Glomerular disorders, tubular necrosis & acid-base disturbances.',
     createdAt: '2026-01-15T00:00:00Z',
-    membersCount: 12,
-    activeStudyingCount: 2,
-  },
-];
-
-export const MOCK_SESSIONS: StudySession[] = [
-  {
-    id: 'sess_1',
-    userId: 'user_2',
-    groupId: 'grp_1',
-    title: 'Pathfinder Rotational Dynamics (Prob 12-25)',
-    category: 'Practice',
-    durationSec: 10800, // 3h
-    startedAt: '2026-09-16T14:00:00Z',
-    endedAt: '2026-09-16T17:00:00Z',
-    user: MOCK_USERS[2],
-  },
-  {
-    id: 'sess_2',
-    userId: 'user_1',
-    groupId: 'grp_1',
-    title: 'Landau Lifshitz Classical Mechanics Chapter 2',
-    category: 'Theory',
-    durationSec: 8100, // 2h 15m
-    startedAt: '2026-09-16T15:30:00Z',
-    endedAt: '2026-09-16T17:45:00Z',
-    user: MOCK_USERS[1],
-  },
-  {
-    id: 'sess_3',
-    userId: 'user_5',
-    groupId: 'grp_1',
-    title: 'Advanced Calculus Double Integrals Revision',
-    category: 'Revision',
-    durationSec: 6300, // 1h 45m
-    startedAt: '2026-09-16T16:00:00Z',
-    endedAt: '2026-09-16T17:45:00Z',
-    user: MOCK_USERS[5],
-  },
-  {
-    id: 'sess_4',
-    userId: 'user_me',
-    groupId: 'grp_1',
-    title: 'Fluid Mechanics Boundary Layer Theory',
-    category: 'Deep Work',
-    durationSec: 9900, // 2h 45m
-    startedAt: '2026-09-16T11:00:00Z',
-    endedAt: '2026-09-16T13:45:00Z',
-    user: CURRENT_USER,
-  },
-];
-
-export const MOCK_MESSAGES: Message[] = [
-  {
-    id: 'msg_pin_1',
-    groupId: 'grp_1',
-    userId: 'user_1',
-    user: MOCK_USERS[1],
-    content: '📌 **Squad Weekly Target**: Everyone must clock at least 25 verified hours this week before the mock exam on Sunday 18:00 UTC. Check the Vault for the Pathfinder solutions sheet.',
-    isPinned: true,
-    createdAt: '2026-09-15T09:00:00Z',
-    reactions: [
-      { id: 'r1', messageId: 'msg_pin_1', userId: 'user_2', userName: 'Chen Wei', emoji: '🔥' },
-      { id: 'r2', messageId: 'msg_pin_1', userId: 'user_me', userName: 'Marcus Vance', emoji: '⚡' },
-      { id: 'r3', messageId: 'msg_pin_1', userId: 'user_5', userName: 'Priya Sharma', emoji: '💯' },
-    ],
-  },
-  {
-    id: 'msg_1',
-    groupId: 'grp_1',
-    userId: 'user_2',
-    user: MOCK_USERS[2],
-    content: 'Just finished the angular momentum tensor derivation for a rolling ellipsoid with non-holonomic constraints. The eigenvalues match the expected inertia matrix.',
-    createdAt: '2026-09-16T15:20:00Z',
-    reactions: [
-      { id: 'r4', messageId: 'msg_1', userId: 'user_1', userName: 'Elena Rostova', emoji: '🧠' },
-      { id: 'r5', messageId: 'msg_1', userId: 'user_me', userName: 'Marcus Vance', emoji: '👏' },
-    ],
-    attachments: [
-      {
-        id: 'att_1',
-        messageId: 'msg_1',
-        fileUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1000&auto=format&fit=crop&q=80',
-        fileType: 'image',
-        fileName: 'derivation_ellipsoid_tensor.png',
-        fileSize: 420000,
-      },
-      {
-        id: 'att_2',
-        messageId: 'msg_1',
-        fileUrl: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=1000&auto=format&fit=crop&q=80',
-        fileType: 'image',
-        fileName: 'matrix_verification_eigenvalues.png',
-        fileSize: 310000,
-      },
-    ],
-  },
-  {
-    id: 'msg_2',
-    groupId: 'grp_1',
-    userId: 'user_1',
-    user: MOCK_USERS[1],
-    replyToId: 'msg_1',
-    replyTo: {
-      id: 'msg_1',
-      userName: 'Chen Wei',
-      content: 'Just finished the angular momentum tensor derivation for a rolling ellipsoid...',
-    },
-    content: 'Insane work Chen! Did you use Euler angles or Cayley-Klein parameters for the transformation?',
-    createdAt: '2026-09-16T15:35:00Z',
-    reactions: [
-      { id: 'r6', messageId: 'msg_2', userId: 'user_2', userName: 'Chen Wei', emoji: '👍' },
-    ],
-  },
-  {
-    id: 'msg_3',
-    groupId: 'grp_1',
-    userId: 'user_me',
-    user: CURRENT_USER,
-    content: null,
-    sessionBroadcast: {
-      sessionId: 'sess_4',
-      durationSec: 9900, // 2h 45m
-      title: 'Fluid Mechanics Boundary Layer Theory',
-      category: 'Deep Work',
-      startedAt: '2026-09-16T11:00:00Z',
-      endedAt: '2026-09-16T13:45:00Z',
-    },
-    createdAt: '2026-09-16T13:45:00Z',
-    reactions: [
-      { id: 'r7', messageId: 'msg_3', userId: 'user_1', userName: 'Elena Rostova', emoji: '🔥' },
-      { id: 'r8', messageId: 'msg_3', userId: 'user_2', userName: 'Chen Wei', emoji: '⚡' },
-      { id: 'r9', messageId: 'msg_3', userId: 'user_5', userName: 'Priya Sharma', emoji: '💯' },
-    ],
-  },
-  {
-    id: 'msg_4',
-    groupId: 'grp_1',
-    userId: 'user_5',
-    user: MOCK_USERS[5],
-    content: 'Check out this comprehensive MIT OpenCourseWare lecture note on Navier-Stokes and Reynolds transport theorem: https://ocw.mit.edu/courses/physics-fluid-dynamics',
-    linkPreview: {
-      url: 'https://ocw.mit.edu/courses/physics-fluid-dynamics',
-      title: 'Advanced Fluid Dynamics & Navier-Stokes Formalism | MIT OCW',
-      description: 'Rigorous mathematical treatment of incompressible flows, vorticity dynamics, and viscous boundary layers.',
-      siteName: 'ocw.mit.edu',
-      imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
-    },
-    createdAt: '2026-09-16T16:15:00Z',
-    reactions: [
-      { id: 'r10', messageId: 'msg_4', userId: 'user_me', userName: 'Marcus Vance', emoji: '❤️' },
-      { id: 'r11', messageId: 'msg_4', userId: 'user_1', userName: 'Elena Rostova', emoji: '🙏' },
-    ],
-  },
-];
-
-export const MOCK_RESOURCES: Resource[] = [
-  {
-    id: 'res_1',
-    groupId: 'grp_1',
-    userId: 'user_1',
-    user: MOCK_USERS[1],
-    title: 'Pathfinder for Olympiad and JEE Physics Complete Solutions',
-    description: 'Comprehensive step-by-step vector and Lagrangian derivations for Chapters 1-14.',
-    url: 'https://example.com/vault/pathfinder_complete_solutions_v3.pdf',
-    type: 'pdf',
-    tags: ['Physics', 'Rotational Dynamics', 'Irodov', 'Olympiad'],
-    fileSize: '14.8 MB',
-    downloadsCount: 142,
-    createdAt: '2026-09-10T14:30:00Z',
-  },
-  {
-    id: 'res_2',
-    groupId: 'grp_1',
-    userId: 'user_2',
-    user: MOCK_USERS[2],
-    title: 'Tensor Calculus & Inertia Matrix Cheatsheet',
-    description: 'One-page ultra-dense formula sheet for transformation matrices and principal axes.',
-    url: 'https://example.com/vault/tensor_inertia_cheatsheet.pdf',
-    type: 'cheatsheet',
-    tags: ['Mechanics', 'Formula Sheet', 'Linear Algebra'],
-    fileSize: '2.4 MB',
-    downloadsCount: 89,
-    createdAt: '2026-09-12T11:20:00Z',
-  },
-  {
-    id: 'res_3',
-    groupId: 'grp_1',
-    userId: 'user_5',
-    user: MOCK_USERS[5],
-    title: 'MIT Incompressible Fluid Mechanics Lecture Series',
-    description: 'Curated 24-lecture syllabus with downloadable problem sets and MATLAB codes.',
-    url: 'https://ocw.mit.edu/courses/physics-fluid-dynamics',
-    type: 'link',
-    tags: ['MIT OCW', 'Fluid Mechanics', 'Lecture Notes'],
-    downloadsCount: 204,
-    createdAt: '2026-09-14T18:00:00Z',
-  },
-  {
-    id: 'res_4',
-    groupId: 'grp_1',
-    userId: 'user_me',
-    user: CURRENT_USER,
-    title: 'Organic Chemistry Named Reactions & Electron Pushing Diagrams',
-    description: 'Curated handwritten summary of 70+ reaction mechanisms with stereochemistry notes.',
-    url: 'https://example.com/vault/organic_mechanisms_handwritten.pdf',
-    type: 'notes',
-    tags: ['Chemistry', 'Organic', 'Mechanisms', 'Clayden'],
-    fileSize: '32.1 MB',
-    downloadsCount: 165,
-    createdAt: '2026-09-15T08:15:00Z',
+    membersCount: 0,
+    activeStudyingCount: 0,
   },
 ];

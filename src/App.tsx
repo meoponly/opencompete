@@ -7,11 +7,14 @@ import { LeaderboardTab } from './components/leaderboard/LeaderboardTab';
 import { ResourceVaultTab } from './components/vault/ResourceVaultTab';
 import { FocusTimerModal } from './components/focus/FocusTimerModal';
 import { FocusTimerDock } from './components/focus/FocusTimerDock';
+import { AuthModal } from './components/auth/AuthModal';
+import { OnboardingModal } from './components/auth/OnboardingModal';
+import { SettingsModal } from './components/settings/SettingsModal';
 
 export const App: React.FC = () => {
   const { activeTab, setIsTimerModalOpen } = useStore();
 
-  // Global keyboard shortcut to open focus timer (Cmd/Ctrl + K or Alt + T)
+  // Global keyboard shortcut to open focus timer (Cmd/Ctrl + K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -44,6 +47,11 @@ export const App: React.FC = () => {
       {/* Floating Focus Timer Engine Modal & Dock */}
       <FocusTimerModal />
       <FocusTimerDock />
+
+      {/* Real Auth, Onboarding & Settings Modals */}
+      <AuthModal />
+      <OnboardingModal />
+      <SettingsModal />
     </div>
   );
 };

@@ -299,7 +299,7 @@ export const FocusTimerModal: React.FC = () => {
         <div className="mt-4 pt-3 border-t border-[#222226] flex items-center justify-between text-[11px] text-[#71717A]">
           <div className="flex items-center gap-1.5">
             <Flame className="w-3.5 h-3.5 text-amber-400" />
-            <span>Current Streak: {currentUser.streakDays} Days</span>
+            <span>Current Streak: {currentUser?.streakDays || 0} Days</span>
           </div>
           <span className="font-mono text-[10px]">Squad: {selectedGroup.name.slice(0, 20)}...</span>
         </div>

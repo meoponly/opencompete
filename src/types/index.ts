@@ -2,9 +2,12 @@ export type CategoryType = 'Theory' | 'Practice' | 'Revision' | 'Deep Work' | 'L
 
 export interface User {
   id: string;
+  email?: string;
   username: string;
   fullName: string;
   avatarUrl?: string;
+  bio?: string;
+  themePreference?: 'dark' | 'light';
   isOnline?: boolean;
   isStudying?: boolean;
   currentTask?: string;
